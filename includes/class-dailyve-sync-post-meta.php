@@ -188,7 +188,25 @@ class Dailyve_Sync_Post_Meta {
         }
 
         if (!$this->should_sync_post($post_id)) {
-            return new WP_Error('dailyve_sync_skipped_post', __('Post is not eligible for Dailyve sync.', 'dailyve-sync'));
+            $reasons = array();
+            if (!$this->settings->is_enabled()) {
+                $reasons[] = 'Plugin is disabled';
+            }
+            if (!$this->is_valid_post_for_hooks($post_id)) {
+                $reasons[] = 'Invalid post type (Expected: ' . $this->settings->operator_post_type() . ', Actual: ' . get_post_type($post_id) . ')';
+            }
+            if (!$this->matches_taxonomy_filter($post_id)) {
+                $reasons[] = 'Failed taxonomy filter';
+            }
+            if (!$this->matches_parent_filter($post_id)) {
+                $reasons[] = 'Failed parent page filter (Parent ID: ' . wp_get_post_parent_id($post_id) . ', Configured: ' . $this->settings->parent_page_id() . ')';
+            }
+            
+            $reason_str = implode(', ', $reasons);
+            $error_msg = __('Post is not eligible for Dailyve sync. Reasons: ', 'dailyve-sync') . $reason_str;
+            
+            $this->mark_sync_failed($post_id, $error_msg);
+            return new WP_Error('dailyve_sync_skipped_post', $error_msg);
         }
 
         if (!$force && isset($this->sent_upserts[$post_id])) {
@@ -296,7 +314,12 @@ class Dailyve_Sync_Post_Meta {
 
         $parent_page_id = $this->settings->parent_page_id();
         if ($parent_page_id > 0) {
-            $args['post_parent'] = $parent_page_id;
+            $descendant_ids = $this->get_descendant_ids($parent_page_id);
+            if (!empty($descendant_ids)) {
+                $args['post__in'] = $descendant_ids;
+            } else {
+                $args['post__in'] = array(0);
+            }
         }
 
         if ($modified_after) {
@@ -397,7 +420,37 @@ class Dailyve_Sync_Post_Meta {
             return true;
         }
 
-        return absint(wp_get_post_parent_id($post_id)) === $parent_page_id;
+        $direct_parent = absint(wp_get_post_parent_id($post_id));
+        if ($direct_parent === $parent_page_id) {
+            return true;
+        }
+
+        $ancestors = get_post_ancestors($post_id);
+        if (is_array($ancestors) && in_array($parent_page_id, $ancestors, true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function get_descendant_ids($parent_id) {
+        $descendants = array();
+        $direct_children = get_posts(array(
+            'post_type' => $this->settings->operator_post_type(),
+            'post_parent' => $parent_id,
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+            'post_status' => 'any',
+        ));
+
+        if (!empty($direct_children)) {
+            $descendants = array_merge($descendants, $direct_children);
+            foreach ($direct_children as $child_id) {
+                $descendants = array_merge($descendants, $this->get_descendant_ids($child_id));
+            }
+        }
+
+        return $descendants;
     }
 
     private function tax_query() {

@@ -95,10 +95,10 @@ class Dailyve_Sync_Admin {
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><label for="dailyve_api_base_url"><?php esc_html_e('NestJS API base URL', 'dailyve-sync'); ?></label></th>
+                            <th scope="row"><label for="dailyve_api_base_url"><?php esc_html_e('App API base URL', 'dailyve-sync'); ?></label></th>
                             <td>
                                 <input type="url" id="dailyve_api_base_url" class="regular-text code" name="<?php echo esc_attr($option_name); ?>[api_base_url]" value="<?php echo esc_attr($options['api_base_url']); ?>" placeholder="https://api.dailyve.com" />
-                                <p class="description"><?php esc_html_e('Use the API root. If your NestJS app is mounted at /api/v2, include /api/v2 here.', 'dailyve-sync'); ?></p>
+                                <p class="description"><?php esc_html_e('Use the API root. If your app is mounted at /api/v2, include /api/v2 here.', 'dailyve-sync'); ?></p>
                             </td>
                         </tr>
                         <tr>
