@@ -3,7 +3,7 @@
  * Plugin Name: Dailyve Sync
  * Description: Sync WordPress operator post media/profile metadata to Dailyve NestJS without changing local content or media.
  * Version: 1.0.0
- * Author: Dailyve
+ * Author: Nghia Le
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Text Domain: dailyve-sync
