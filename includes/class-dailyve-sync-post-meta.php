@@ -485,14 +485,27 @@ class Dailyve_Sync_Post_Meta {
     }
 
     private function gallery_items($post_id) {
-        if (!function_exists('get_field')) {
+        $field_name = $this->settings->gallery_field_name();
+        $raw_gallery = null;
+
+        if (function_exists('get_field')) {
+            $raw_gallery = get_field($field_name, $post_id);
+
+            if (empty($raw_gallery)) {
+                $raw_gallery = get_field($field_name, $post_id, false);
+            }
+        }
+
+        if (empty($raw_gallery)) {
+            $raw_gallery = get_post_meta($post_id, $field_name, true);
+        }
+
+        if (!$raw_gallery) {
             return array();
         }
 
-        $field_name = $this->settings->gallery_field_name();
-        $raw_gallery = get_field($field_name, $post_id);
-        if (!$raw_gallery || !is_array($raw_gallery)) {
-            return array();
+        if (!is_array($raw_gallery)) {
+            $raw_gallery = array($raw_gallery);
         }
 
         $items = array();
@@ -516,6 +529,8 @@ class Dailyve_Sync_Post_Meta {
 
         if (is_numeric($raw_item)) {
             $attachment_id = absint($raw_item);
+        } elseif (is_string($raw_item)) {
+            $url = esc_url_raw($raw_item);
         } elseif (is_array($raw_item)) {
             if (!empty($raw_item['ID'])) {
                 $attachment_id = absint($raw_item['ID']);
